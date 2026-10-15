@@ -95,7 +95,27 @@ async function fetchCatalogImage(p){
  return null;
 }
 function applyPhoto(box,result){if(!box||!box.isConnected||!result)return;const img=document.createElement('img');img.loading='lazy';img.alt='Fotografía referencial del producto';img.referrerPolicy='no-referrer';img.onload=()=>{box.replaceChildren(img);box.classList.add('has-photo');box.title=result.source};img.onerror=()=>{img.remove()};img.src=result.url}
-function loadVisiblePhotos(){if(photoObserver)photoObserver.disconnect();const boxes=[...document.querySelectorAll('[data-photo-id]')];photoObserver=new IntersectionObserver(entries=>{for(const entry of entries){if(!entry.isIntersecting)continue;const box=entry.target;photoObserver.unobserve(box);const p=getProduct(box.dataset.photoId);if(!p)continue;const key=String(p.code);if(!imageCache.has(key))imageCache.set(key,fetchCatalogImage(p));imageCache.get(key).then(result=>applyPhoto(box,result)).catch(()=>{});}}, {rootMargin:'200px'});boxes.forEach(box=>photoObserver.observe(box))}
+function loadVisiblePhotos(){
+ if(photoObserver)photoObserver.disconnect();
+ const boxes=[...document.querySelectorAll('[data-photo-id]')];
+ // El visor está oculto mientras no exista foto. Observar la tarjeta visible,
+ // nunca el visor oculto, porque IntersectionObserver no lo detectaría.
+ photoObserver=new IntersectionObserver(entries=>{
+  for(const entry of entries){
+   if(!entry.isIntersecting)continue;
+   const card=entry.target;
+   photoObserver.unobserve(card);
+   const box=card.querySelector('[data-photo-id]');
+   if(!box)return;
+   const p=getProduct(box.dataset.photoId);
+   if(!p)return;
+   const key=String(p.code||'').trim();
+   if(!imageCache.has(key))imageCache.set(key,fetchCatalogImage(p));
+   imageCache.get(key).then(result=>applyPhoto(box,result)).catch(()=>{});
+  }
+ },{rootMargin:'300px'});
+ boxes.forEach(box=>{const card=box.closest('.product');if(card)photoObserver.observe(card)});
+}
 function render(){
  let cats=['Todos',...new Set(products.map(p=>p.category).filter(Boolean))].sort((a,b)=>a==='Todos'?-1:b==='Todos'?1:a.localeCompare(b));
  $('filters').innerHTML=cats.map(c=>`<button class="chip ${c===category?'active':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('');
