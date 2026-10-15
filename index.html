@@ -60,8 +60,22 @@ const persist=()=>{localStorage.setItem('pf_catalog_cart',JSON.stringify(cart));
 const imageCache=new Map();let photoObserver=null;
 const imageSearchUrl=p=>'https://www.google.com/search?tbm=isch&q='+encodeURIComponent([p.code,p.name,p.presentation||''].filter(Boolean).join(' '));
 function canUseOpenFacts(p){return /^\d{8,14}$/.test(String(p.code||''))}
+// Fotografías publicadas en este mismo repositorio de GitHub Pages.
+// Nombre del archivo: imagenes/CODIGO.webp (ejemplo: imagenes/7702870010358.webp).
+function githubPhoto(p){
+ const code=String(p.code||'').trim();
+ return /^\d{8,14}$/.test(code)?new URL('imagenes/'+code+'.webp',document.baseURI).href:null;
+}
+function imageExists(url){return new Promise(resolve=>{
+ const img=new Image();let done=false;
+ const finish=ok=>{if(done)return;done=true;clearTimeout(timer);img.onload=null;img.onerror=null;resolve(ok)};
+ const timer=setTimeout(()=>finish(false),2500);
+ img.onload=()=>finish(true);img.onerror=()=>finish(false);img.src=url;
+})}
 async function fetchCatalogImage(p){
- const approved=photoUrl(p);if(approved)return {url:approved,source:'Fotografía del catálogo'};
+ const approved=photoUrl(p);if(approved)return {url:approved,source:'Fotografía aprobada'};
+ const local=githubPhoto(p);
+ if(local&&await imageExists(local))return {url:local,source:'Fotografía de PuntoFarma alojada en GitHub'};
  if(!canUseOpenFacts(p))return null;
  const code=String(p.code), services=['https://world.openbeautyfacts.org','https://world.openfoodfacts.org','https://world.openproductsfacts.org'];
  for(const origin of services){
